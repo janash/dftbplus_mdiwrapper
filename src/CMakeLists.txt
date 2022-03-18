@@ -23,9 +23,9 @@ include_directories( /repo/build/dftbplus/build/install/include )
 
 # Compile the driver
 
-add_executable(dftbplus_wrapper
-               dftbplus_wrapper.cpp)
-target_link_libraries(dftbplus_wrapper mdi
+add_executable(dftbplus_mdiwrapper
+               dftbplus_mdiwrapper.c)
+target_link_libraries(dftbplus_mdiwrapper mdi
                       dftbplus
                       ${MPI_LIBRARIES})
 
@@ -34,13 +34,13 @@ target_link_libraries(dftbplus_wrapper mdi
 # Ensure that MPI is properly linked
 
 if(NOT MPI_FOUND)
-   target_include_directories(dftbplus_wrapper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/STUBS_MPI/)
+   target_include_directories(dftbplus_mdiwrapper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/STUBS_MPI/)
 endif()
 if(MPI_COMPILE_FLAGS)
-   set_target_properties(dftbplus_wrapper PROPERTIES
+   set_target_properties(dftbplus_mdiwrapper PROPERTIES
       COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
 endif()
 if(MPI_LINK_FLAGS)
-   set_target_properties(dftbplus_wrapper PROPERTIES
+   set_target_properties(dftbplus_mdiwrapper PROPERTIES
       LINK_FLAGS "${MPI_LINK_FLAGS}")
 endif()
