@@ -15,6 +15,10 @@ set( MDI_LOCATION ${CMAKE_BINARY_DIR}/lib/mdi/MDI_Library/ )
 link_directories( ${MDI_LOCATION} )
 include_directories(${MDI_LOCATION})
 
+link_directories( /repo/build/dftbplus/build/install/lib )
+include_directories( /repo/build/dftbplus/build/install/include )
+
+
 
 
 # Compile the driver
@@ -22,6 +26,7 @@ include_directories(${MDI_LOCATION})
 add_executable(dftbplus_wrapper
                dftbplus_wrapper.cpp)
 target_link_libraries(dftbplus_wrapper mdi
+                      dftbplus
                       ${MPI_LIBRARIES})
 
 
