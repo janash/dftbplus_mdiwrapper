@@ -134,6 +134,7 @@ CONTAINS
        terminate_flag = .true.
     CASE DEFAULT
        WRITE(6,*)'Error: command not recognized'
+       STOP 1
     END SELECT
 
     ierr = 0
