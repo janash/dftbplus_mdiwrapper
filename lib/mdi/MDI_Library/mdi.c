@@ -87,8 +87,10 @@ const int MDI_BYTE         = MDI_BYTE_;
 const int MDI_TCP    = MDI_TCP_;
 /*! \brief MPI communication method */
 const int MDI_MPI    = MDI_MPI_;
-/*! \brief Library communication method */
+/*! \brief Library communication method (deprecated) */
 const int MDI_LINK   = MDI_LINK_;
+/*! \brief Library communication method */
+const int MDI_PLUGIN   = MDI_LINK_;
 /*! \brief Test communication method */
 const int MDI_TEST   = MDI_TEST_;
 
@@ -819,6 +821,56 @@ int MDI_Get_role(int* role)
 }
 
 
+/*! \brief Get the communication method of a communicator
+ *
+ * The function returns \p 0 on a success.
+ *
+ * \param [out]      method
+ *                   Role of the code (either \p MDI_TCP, \p MDI_MPI, \p MDI_TEST, or \p MDI_PLUGIN)
+ * \param [in]       comm
+ *                   MDI communicator for which the library will return the communication method.
+ *
+ */
+int MDI_Get_method(int* method, MDI_Comm comm)
+{
+  communicator* comm_obj = get_communicator(current_code, comm);
+  *method = comm_obj->method_id;
+  return 0;
+}
+
+
+/*! \brief Get the previously accepted MDI communicator at a specific index in the array of all communicators.
+ *
+ * The function returns \p 0 on a success.
+ *
+ * \param [out]      comm
+ *                   Value of the communicator.
+ *                   If no communicator exists at the given index, returns \p MDI_COMM_NULL.
+ * \param [in]       index
+ *                   Request the i'th communicator in the list of accepted and valid communicators.
+ *                   The list begins at \p 0.
+ *
+ */
+int MDI_Get_communicator(MDI_Comm* comm, int index)
+{
+  code* this_code = get_code(current_code);
+  if ( index >= this_code->comms->size || index < 0 ) {
+    *comm = MDI_COMM_NULL;
+  }
+  else {
+    communicator* comm_obj = vector_get(this_code->comms, index);
+    if ( comm_obj->is_accepted == 0 ) {
+      // If the code hasn't accepted this communicator, return null
+      *comm = MDI_COMM_NULL;
+    }
+    else {
+      *comm = comm_obj->id;
+    }
+  }
+  return 0;
+}
+
+
 /*! \brief Set the size of MPI_COMM_WORLD
  *
  * This function is only used if the linked program uses MPI4PY.
@@ -932,7 +984,7 @@ int MDI_Check_node_exists(const char* node_name, MDI_Comm comm, int* flag)
   }
 
   // confirm that the node_name size is not greater than MDI_COMMAND_LENGTH
-  if ( strlen(node_name) > COMMAND_LENGTH ) {
+  if ( strlen(node_name) > MDI_COMMAND_LENGTH_ ) {
     mdi_error("Node name is greater than MDI_COMMAND_LENGTH");
     return 2;
   }
@@ -1138,13 +1190,13 @@ int MDI_Check_command_exists(const char* node_name, const char* command_name, MD
   }
 
   // confirm that the node_name size is not greater than MDI_COMMAND_LENGTH
-  if ( strlen(node_name) > COMMAND_LENGTH ) {
+  if ( strlen(node_name) > MDI_COMMAND_LENGTH_ ) {
     mdi_error("Node name is greater than MDI_COMMAND_LENGTH");
     return 2;
   }
 
   // confirm that the command_name size is not greater than MDI_COMMAND_LENGTH
-  if ( strlen(command_name) > COMMAND_LENGTH ) {
+  if ( strlen(command_name) > MDI_COMMAND_LENGTH_ ) {
     mdi_error("Cannot chcek command name with length greater than MDI_COMMAND_LENGTH");
     return 3;
   }
@@ -1217,7 +1269,7 @@ int MDI_Get_ncommands(const char* node_name, MDI_Comm comm, int* ncommands)
   }
 
   // confirm that the node_name size is not greater than MDI_COMMAND_LENGTH
-  if ( strlen(node_name) > COMMAND_LENGTH ) {
+  if ( strlen(node_name) > MDI_COMMAND_LENGTH_ ) {
     mdi_error("Node name is greater than MDI_COMMAND_LENGTH");
     return 2;
   }
@@ -1388,13 +1440,13 @@ int MDI_Check_callback_exists(const char* node_name, const char* callback_name, 
   }
 
   // confirm that the node_name size is not greater than MDI_COMMAND_LENGTH
-  if ( strlen(node_name) > COMMAND_LENGTH ) {
+  if ( strlen(node_name) > MDI_COMMAND_LENGTH_ ) {
     mdi_error("Node name is greater than MDI_COMMAND_LENGTH");
     return 2;
   }
 
   // confirm that the callback_name size is not greater than MDI_COMMAND_LENGTH
-  if ( strlen(callback_name) > COMMAND_LENGTH ) {
+  if ( strlen(callback_name) > MDI_COMMAND_LENGTH_ ) {
     mdi_error("Cannot check callback name with length greater than MDI_COMMAND_LENGTH");
     return 3;
   }
@@ -1467,7 +1519,7 @@ int MDI_Get_ncallbacks(const char* node_name, MDI_Comm comm, int* ncallbacks)
   }
 
   // confirm that the node_name size is not greater than MDI_COMMAND_LENGTH
-  if ( strlen(node_name) > COMMAND_LENGTH ) {
+  if ( strlen(node_name) > MDI_COMMAND_LENGTH_ ) {
     mdi_error("Node name is greater than MDI_COMMAND_LENGTH");
     return 2;
   }
@@ -1655,6 +1707,56 @@ int MDI_Launch_plugin(const char* plugin_name, const char* options, void* mpi_co
 }
 
 
+/*! \brief Open an MDI plugin instance in the background
+ *
+ * The function returns \p 0 on a success.
+ *
+ * \param [in]       plugin_name
+ *                   Name of the plugin.
+ * \param [in]       options
+ *                   Command-line options for the plugin.
+ * \param [in]       mpi_comm_ptr
+ *                   Pointer to an MPI intra-communicator that spans all ranks that will run this plugin instance.
+ * \param [out]      mdi_comm_ptr
+ *                   Pointer to an MDI communicator for communication with the launched plugin.
+ */
+int MDI_Open_plugin(const char* plugin_name, const char* options, void* mpi_comm_ptr,
+                       MDI_Comm* mdi_comm_ptr) {
+#if _MDI_PLUGIN_SUPPORT == 1
+  int ret = library_open_plugin(plugin_name, options, mpi_comm_ptr,
+                                   mdi_comm_ptr);
+  return ret;
+#else
+  mdi_error("MDI_Ilaunch_plugin was called, but this build of the MDI Library was built without plugin support.");
+  return 1;
+#endif
+}
+
+
+/*! \brief Close an MDI plugin instance
+ *
+ * The function returns \p 0 on a success.
+ *
+ * \param [in]       plugin_name
+ *                   Name of the plugin.
+ * \param [in]       options
+ *                   Command-line options for the plugin.
+ * \param [in]       mpi_comm_ptr
+ *                   Pointer to an MPI intra-communicator that spans all ranks that will run this plugin instance.
+ * \param [out]      mdi_comm_ptr
+ *                   Pointer to an MDI communicator for communication with the launched plugin.
+ */
+int MDI_Close_plugin(MDI_Comm mdi_comm) {
+#if _MDI_PLUGIN_SUPPORT == 1
+  int ret = library_close_plugin(mdi_comm);
+  return ret;
+#else
+  mdi_error("MDI_Close_plugin was called, but this build of the MDI Library was built without plugin support.");
+  return 1;
+#endif
+}
+
+
 /*! \brief Set the callback MDI uses for MDI_Execute_Command
  *
  * The function returns \p 0 on a success.
@@ -1795,6 +1897,19 @@ int MDI_Set_Mpi4py_Send_Callback(int (*mpi4py_send)(void*, int, int, int, MDI_Co
 }
 
 
+/*! \brief Set the callback MDI uses for gathering MDI versions when using mpi4py
+ *
+ * The function returns \p 0 on a success.
+ *
+ * \param [in]       mpi4py_allgather
+ *                   Function pointer to the mpi4py_allgather callback
+ */
+int MDI_Set_Mpi4py_Allgather_Callback(int (*mpi4py_allgather)(void*, void*)) {
+  mpi4py_allgather_callback = mpi4py_allgather;
+  return 0;
+}
+
+
 /*! \brief Set the callback MDI uses for gathering code names when using mpi4py
  *
  * The function returns \p 0 on a success.
@@ -1802,7 +1917,7 @@ int MDI_Set_Mpi4py_Send_Callback(int (*mpi4py_send)(void*, int, int, int, MDI_Co
  * \param [in]       mpi4py_gather_names
  *                   Function pointer to the mpi4py_gather_names callback
  */
-int MDI_Set_Mpi4py_Gather_Names_Callback(int (*mpi4py_gather_names)(void*, void*)) {
+int MDI_Set_Mpi4py_Gather_Names_Callback(int (*mpi4py_gather_names)(void*, void*, int*, int*)) {
   mpi4py_gather_names_callback = mpi4py_gather_names;
   return 0;
 }

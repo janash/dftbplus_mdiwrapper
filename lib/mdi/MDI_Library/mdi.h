@@ -74,6 +74,7 @@ DllExport extern const int MDI_BYTE;
 DllExport extern const int MDI_TCP;
 DllExport extern const int MDI_MPI;
 DllExport extern const int MDI_LINK;
+DllExport extern const int MDI_PLUGIN;
 DllExport extern const int MDI_TEST;
 
 // MDI role types
@@ -96,6 +97,8 @@ DllExport int MDI_Conversion_Factor(const char* in_unit, const char* out_unit, d
 DllExport int MDI_Conversion_factor(const char* in_unit, const char* out_unit, double* conv);
 DllExport int MDI_Get_Role(int* role);
 DllExport int MDI_Get_role(int* role);
+DllExport int MDI_Get_method(int* role, MDI_Comm comm);
+DllExport int MDI_Get_communicator(MDI_Comm* comm, int index);
 
 // functions for managing Nodes, Commands, and Callbacks
 DllExport int MDI_Register_Node(const char* node_name);
@@ -131,6 +134,8 @@ DllExport int MDI_MPI_set_world_comm(void* world_comm);
 DllExport int MDI_Launch_plugin(const char* plugin_name, const char* options, void* mpi_comm_ptr,
                                 MDI_Driver_node_callback_t driver_node_callback,
                                 void* driver_callback_object);
+DllExport int MDI_Open_plugin(const char* plugin_name, const char* options, void* mpi_comm_ptr, MDI_Comm* mdi_comm_ptr);
+DllExport int MDI_Close_plugin(MDI_Comm mdi_comm);
 DllExport int MDI_Set_Execute_Command_Func(int (*generic_command)(const char*, MDI_Comm, void*), void* class_object);
 DllExport int MDI_Set_execute_command_func(int (*generic_command)(const char*, MDI_Comm, void*), void* class_object);
 DllExport int MDI_Get_plugin_mode(int* plugin_mode);
@@ -142,7 +147,8 @@ DllExport int MDI_Plugin_get_arg(int index, char** arg_ptr);
 // functions for managing callback functions for mpi4py
 DllExport int MDI_Set_Mpi4py_Recv_Callback(int (*mpi4py_recv)(void*, int, int, int, MDI_Comm));
 DllExport int MDI_Set_Mpi4py_Send_Callback(int (*mpi4py_send)(void*, int, int, int, MDI_Comm));
-DllExport int MDI_Set_Mpi4py_Gather_Names_Callback(int (*mpi4py_gather_names)(void*, void*));
+DllExport int MDI_Set_Mpi4py_Allgather_Callback(int (*mpi4py_allgather)(void*, void*));
+DllExport int MDI_Set_Mpi4py_Gather_Names_Callback(int (*mpi4py_gather_names)(void*, void*, int*, int*));
 DllExport int MDI_Set_Mpi4py_Split_Callback(int (*mpi4py_split)(int, int, MDI_Comm, int));
 DllExport int MDI_Set_Mpi4py_Rank_Callback(int (*mpi4py_rank)(int));
 DllExport int MDI_Set_Mpi4py_Size_Callback(int (*mpi4py_size)(int));

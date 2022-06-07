@@ -39,6 +39,7 @@ MDI_COMM_NULL = ctypes.c_int.in_dll(mdi, "MDI_COMM_NULL").value
 MDI_TCP = ctypes.c_int.in_dll(mdi, "MDI_TCP").value
 MDI_MPI = ctypes.c_int.in_dll(mdi, "MDI_MPI").value
 MDI_LINK = ctypes.c_int.in_dll(mdi, "MDI_LINK").value
+MDI_PLUGIN = ctypes.c_int.in_dll(mdi, "MDI_PLUGIN").value
 MDI_TEST = ctypes.c_int.in_dll(mdi, "MDI_TEST").value
 MDI_DRIVER = ctypes.c_int.in_dll(mdi, "MDI_DRIVER").value
 MDI_ENGINE = ctypes.c_int.in_dll(mdi, "MDI_ENGINE").value
@@ -308,6 +309,53 @@ def set_mpi4py_rank_callback():
     global mpi4py_rank_callback_c
     mdi.MDI_Set_Mpi4py_Rank_Callback( mpi4py_rank_callback_c )
 
+
+
+##################################################
+# MPI4Py Allgather Callback                   #
+##################################################
+
+# define the type of the callback function
+mpi4py_allgather_func_type = ctypes.CFUNCTYPE(ctypes.c_int, # return
+                                         ctypes.POINTER(ctypes.c_int), # sendbuf
+                                         ctypes.POINTER(ctypes.c_int)) # recvbuf
+
+# define the c function that allows the callback function to be set
+mdi.MDI_Set_Mpi4py_Allgather_Callback.restype = ctypes.c_int
+mdi.MDI_Set_Mpi4py_Allgather_Callback.argtypes = [mpi4py_allgather_func_type]
+
+# define the python callback function
+def mpi4py_allgather_callback(buf, names):
+    try:
+
+        global world_comm
+        world_size = world_comm.Get_size()
+
+        # Create numpy arrays from the C pointers
+        buf_shape = tuple( [5] )
+        buf_np = np.ctypeslib.as_array(buf, shape=buf_shape)
+        names_shape = tuple( [5 * world_size] )
+        names_np = np.ctypeslib.as_array(names, shape=names_shape)
+
+        # Gather the names
+        world_comm.Allgather([buf_np, MPI.INT], [names_np, MPI.INT])
+
+        return 0
+
+    except Exception as e:
+
+        sys.stderr.write("MDI Error in mpi4py_allgather_callback: \n" + str(e) + "\n")
+        sys.stderr.flush()
+        return -1
+
+# define the python function that will set the callback function in c
+mpi4py_allgather_callback_c = mpi4py_allgather_func_type( mpi4py_allgather_callback )
+def set_mpi4py_allgather_callback():
+    global mpi4py_allgather_callback_c
+    mdi.MDI_Set_Mpi4py_Allgather_Callback( mpi4py_allgather_callback_c )
+
+
+
 ##################################################
 # MPI4Py Gather Names Callback                   #
 ##################################################
@@ -315,27 +363,33 @@ def set_mpi4py_rank_callback():
 # define the type of the callback function
 mpi4py_gather_names_func_type = ctypes.CFUNCTYPE(ctypes.c_int, # return
                                          ctypes.POINTER(ctypes.c_char), # buf
-                                         ctypes.POINTER(ctypes.c_char)) # names
+                                         ctypes.POINTER(ctypes.c_char), # names
+                                         ctypes.POINTER(ctypes.c_int),  # name_lengths
+                                         ctypes.POINTER(ctypes.c_int))  # name_displs
 
 # define the c function that allows the callback function to be set
 mdi.MDI_Set_Mpi4py_Gather_Names_Callback.restype = ctypes.c_int
 mdi.MDI_Set_Mpi4py_Gather_Names_Callback.argtypes = [mpi4py_gather_names_func_type]
 
 # define the python callback function
-def mpi4py_gather_names_callback(buf, names):
+def mpi4py_gather_names_callback(buf, names, name_lengths, name_displs):
     try:
 
         global world_comm
         world_size = world_comm.Get_size()
 
-       # Create numpy arrays from the C pointers
+        # Create numpy arrays from the C pointers
         buf_shape = tuple( [MDI_NAME_LENGTH] )
         buf_np = np.ctypeslib.as_array(buf, shape=buf_shape)
         names_shape = tuple( [MDI_NAME_LENGTH * world_size] )
         names_np = np.ctypeslib.as_array(names, shape=names_shape)
+        names_lengths_shape = tuple( [world_size] )
+        name_lengths_np = np.ctypeslib.as_array(name_lengths, shape=names_lengths_shape)
+        name_displs_np = np.ctypeslib.as_array(name_displs, shape=names_lengths_shape)
 
-       # Gather the names
-        world_comm.Allgather([buf_np, MPI.CHAR], [names_np, MPI.CHAR])
+        # Gather the names
+        #world_comm.Allgather([buf_np, MPI.CHAR], [names_np, MPI.CHAR])
+        world_comm.Allgatherv([buf_np, MPI.CHAR], [names_np, name_lengths_np, name_displs_np, MPI.CHAR])
 
         return 0
 
@@ -545,6 +599,7 @@ def MDI_Init(arg1, arg2 = None):
     set_mpi4py_send_callback()
     set_mpi4py_size_callback()
     set_mpi4py_rank_callback()
+    set_mpi4py_allgather_callback()
     set_mpi4py_gather_names_callback()
     set_mpi4py_barrier_callback()
     set_mpi4py_split_callback()
@@ -746,17 +801,39 @@ def MDI_Conversion_factor(arg1, arg2):
 def MDI_Conversion_Factor(arg1, arg2):
     return MDI_Conversion_factor(arg1, arg2)
 
-# MDI_Get_Role
-mdi.MDI_Get_Role.argtypes = [ctypes.POINTER(ctypes.c_int)]
-mdi.MDI_Get_Role.restype = ctypes.c_int
+# MDI_Get_role
+mdi.MDI_Get_role.argtypes = [ctypes.POINTER(ctypes.c_int)]
+mdi.MDI_Get_role.restype = ctypes.c_int
 def MDI_Get_role():
     role = ctypes.c_int()
     ret = mdi.MDI_Get_Role(ctypes.byref(role))
     if ret != 0:
-        raise Exception("MDI Error: MDI_Get_Role failed")
+        raise Exception("MDI Error: MDI_Get_role failed")
     return role.value
 def MDI_Get_Role():
     return MDI_Get_role()
+
+
+# MDI_Get_method
+mdi.MDI_Get_method.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
+mdi.MDI_Get_method.restype = ctypes.c_int
+def MDI_Get_method(comm):
+    method = ctypes.c_int()
+    ret = mdi.MDI_Get_method(ctypes.byref(method), comm)
+    if ret != 0:
+        raise Exception("MDI Error: MDI_Get_method failed")
+    return method.value
+
+
+# MDI_Get_communicator
+mdi.MDI_Get_communicator.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
+mdi.MDI_Get_communicator.restype = ctypes.c_int
+def MDI_Get_communicator(index):
+    comm = ctypes.c_int()
+    ret = mdi.MDI_Get_communicator(ctypes.byref(comm), index)
+    if ret != 0:
+        raise Exception("MDI Error: MDI_Get_communicator failed")
+    return comm.value
 
 
 #####################################

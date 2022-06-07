@@ -22,8 +22,6 @@
 #endif
 
 // Hard-coded values
-#define COMMAND_LENGTH 12
-#define NAME_LENGTH 12
 #define PLUGIN_PATH_LENGTH 2048
 
 // Defined languages
@@ -33,14 +31,14 @@
 
 // MDI version numbers
 #define MDI_MAJOR_VERSION_ 1
-#define MDI_MINOR_VERSION_ 3
+#define MDI_MINOR_VERSION_ 4
 #define MDI_PATCH_VERSION_ 0
 
 // length of an MDI command in characters
-#define MDI_COMMAND_LENGTH_ 12
+#define MDI_COMMAND_LENGTH_ 256
 
 // length of an MDI name in characters
-#define MDI_NAME_LENGTH_ 12
+#define MDI_NAME_LENGTH_ 256
 
 // length of an MDI label in characters
 #define MDI_LABEL_LENGTH_ 64
@@ -103,13 +101,19 @@ typedef struct method_struct {
 
 typedef struct communicator_struct {
   /*! \brief Communication method used by this communicator */
-  int method;
+  int method_id;
   /*! \brief MDI_Comm handle that corresponds to this communicator */
   MDI_Comm_Type id;
+  /*! \brief Indicate whether this communicator has been accepted yet */
+  int is_accepted;
   /*! \brief Handle for the id of the associated code */
   int code_id;
   /*! \brief For communicators using the TCP communicatiom method, the socket descriptor (WINDOWS) */
   sock_t sockfd;
+  /*! \brief The value of MDI_NAME_LENGTH for the connected code */
+  int name_length;
+  /*! \brief The value of MDI_COMMAND_LENGTH for the connected code */
+  int command_length;
   /*! \brief The MDI version of the connected code */
   int mdi_version[3];
   /*! \brief The nodes supported by the connected code */
@@ -126,7 +130,7 @@ typedef struct communicator_struct {
 
 typedef struct node_struct {
   /*! \brief Name of the node */
-  char name[COMMAND_LENGTH];
+  char name[MDI_COMMAND_LENGTH_];
   /*! \brief Vector containing all the commands supported at this node */
   vector* commands;
   /*! \brief Vector containing all the callbacks associated with this node */
@@ -135,9 +139,9 @@ typedef struct node_struct {
 
 typedef struct code_struct {
   /*! \brief Name of the driver/engine */
-  char name[NAME_LENGTH];
+  char name[MDI_NAME_LENGTH_];
   /*! \brief Role of the driver/engine */
-  char role[NAME_LENGTH];
+  char role[MDI_NAME_LENGTH_];
   /*! \brief Handle for this code */
   int id;
   /*! \brief The number of communicator handles that have been returned by MDI_Accept_Connection() */
@@ -219,8 +223,11 @@ extern int (*mpi4py_recv_callback)(void*, int, int, int, MDI_Comm_Type);
 /*! \brief Python callback pointer for MPI_Send */
 extern int (*mpi4py_send_callback)(void*, int, int, int, MDI_Comm_Type);
 
+/*! \brief Python callback pointer for the initial MPI allgather */
+extern int (*mpi4py_allgather_callback)(void*, void*);
+
 /*! \brief Python callback pointer for gathering names */
-extern int (*mpi4py_gather_names_callback)(void*, void*);
+extern int (*mpi4py_gather_names_callback)(void*, void*, int*, int*);
 
 /*! \brief Python callback pointer for MPI_Comm_split */
 extern int (*mpi4py_split_callback)(int, int, MDI_Comm_Type, int);
