@@ -25,14 +25,14 @@ include_directories( /repo/build/dftbplus/build/install/include/dftbplus/modfile
 
 add_executable(dftbplus_mdiwrapper
                dftbplus_mdiwrapper.F90
-               dftbplus_engine.f90)
+               dftbplus_engine.F90)
 
 
 # Compile the engine as a shared library
 
 add_library(dftbplus_mdiwrapper_lib SHARED
-            dftbplus_mdiwrapper.f90
-            dftbplus_engine.f90)
+            dftbplus_mdiwrapper.F90
+            dftbplus_engine.F90)
 target_link_libraries(dftbplus_mdiwrapper_lib mdi)
 set_target_properties(dftbplus_mdiwrapper_lib PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
