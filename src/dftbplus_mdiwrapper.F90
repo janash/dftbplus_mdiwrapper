@@ -67,7 +67,7 @@ IMPLICIT NONE
    call getEnergy(env, main, initialEnergy)
    
    ! run the calculation
-   call runDftbPlus(main, env)
+   ! call runDftbPlus(main, env)
    
 
    ! Get the energy using the main api
@@ -80,6 +80,11 @@ IMPLICIT NONE
    ! Access number of atoms
    write(*,*) "Number of Atoms (from main object):", main%nAtom
    write(*,*) "Number of Atoms (using main api):", nrOfAtoms(main)
+
+   ! Access cell information
+   write(*,*) "Lattice Vector Shape: ", SHAPE(main%latVec)
+   ! will get lattice vectors in atomic length units
+   write(*,*) "Lattice Vectors: ", main%latVec
 
 
    ! Synchronize all MPI ranks
