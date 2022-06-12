@@ -30,6 +30,8 @@ IMPLICIT NONE
    ! This has all the system info
    type(TDftbPlusMain) :: main
 
+   real*8, dimension(9) :: latVecs
+
    ! Initialize the MPI environment
    world_comm = MPI_COMM_WORLD;
    call MPI_Init(ierr)
@@ -85,6 +87,12 @@ IMPLICIT NONE
    write(*,*) "Lattice Vector Shape: ", SHAPE(main%latVec)
    ! will get lattice vectors in atomic length units
    write(*,*) "Lattice Vectors: ", main%latVec
+
+   latVecs = reshape(main%latVec, (/9/) )
+
+   write(*,*) "After reshape: ", main%latVec
+   write(*,*) "Lattice Vector Shape: ", SHAPE(main%latVec)
+   write(*,*) "Reshape Shape: ", SHAPE(latVecs)
 
 
    ! Synchronize all MPI ranks
