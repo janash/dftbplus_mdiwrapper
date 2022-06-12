@@ -107,6 +107,7 @@ CONTAINS
     CALL MDI_Register_command("@DEFAULT", "EXIT", ierr)
     CALL MDI_Register_command("@DEFAULT","<CELL", ierr)
     CALL MDI_Register_command("@DEFAULT", "<CHARGES", ierr)
+    CALL MDI_Register_command("@DEFAULT", "<COORDS", ierr)
     CALL MDI_Register_command("@DEFAULT","<ENERGY", ierr)
 
     ! Connct to the driver
@@ -167,6 +168,8 @@ CONTAINS
       call send_cell(comm)
    case( "<CHARGES" )
       call send_charges(comm)
+   case( "<COORDS" )
+      call send_coords(comm)
    case( "<ENERGY" )
       call send_energy(comm)
     CASE DEFAULT
@@ -243,6 +246,28 @@ CONTAINS
    call MDI_Send(atomCharges, nAtoms, MDI_DOUBLE, comm, ierr)
 
    END SUBROUTINE send_charges
+
+   SUBROUTINE send_coords(comm)
+      USE mdi, ONLY          : MDI_DOUBLE, MDI_Send
+      USE dftbp_dftbplus_mainapi, ONLY : nrOfAtoms
+
+      implicit none
+      integer, intent(in)        :: comm
+      integer                    :: ierr
+      integer                    :: nAtoms
+      integer                    :: nCoords
+      real*8, allocatable        :: atomCoords(:)
+
+      nAtoms = nrOfAtoms(main)
+      nCoords = 3 * nAtoms
+
+      allocate( atomCoords(nCoords) )
+
+      atomCoords = RESHAPE( main%coord0, (/nCoords/) )
+
+      call MDI_Send(atomCoords, nCoords, MDI_DOUBLE, comm, ierr)
+
+   END SUBROUTINE send_coords
 
 
 END MODULE DFTBPLUS_ENGINE
