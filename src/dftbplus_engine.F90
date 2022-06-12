@@ -106,6 +106,7 @@ CONTAINS
     CALL MDI_Register_node("@DEFAULT", ierr)
     CALL MDI_Register_command("@DEFAULT", "EXIT", ierr)
     CALL MDI_Register_command("@DEFAULT","<CELL", ierr)
+    CALL MDI_Register_command("@DEFAULT", "<CHARGES", ierr)
     CALL MDI_Register_command("@DEFAULT","<ENERGY", ierr)
 
     ! Connct to the driver
@@ -164,6 +165,8 @@ CONTAINS
        terminate_flag = .true.
    case( "<CELL" )
       call send_cell(comm)
+   case( "<CHARGES" )
+      call send_charges(comm)
    case( "<ENERGY" )
       call send_energy(comm)
     CASE DEFAULT
@@ -195,6 +198,12 @@ CONTAINS
 
   END SUBROUTINE send_energy
 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <CELL
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   SUBROUTINE send_cell(comm)
    USE mdi, ONLY     : MDI_DOUBLE, MDI_Send
 
@@ -209,5 +218,31 @@ CONTAINS
    call MDI_Send(latVecs, 9, MDI_Double, comm, ierr)
 
   END SUBROUTINE send_cell
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <CHARGES
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  SUBROUTINE send_charges(comm)
+   USE mdi, ONLY       : MDI_DOUBLE, MDI_Send
+   USE dftbp_dftbplus_mainapi, ONLY : getGrossCharges, nrOfAtoms
+
+   implicit none
+   integer, intent(in)        :: comm
+   integer                    :: ierr
+   integer                    :: nAtoms
+   real*8, allocatable        :: atomCharges(:)
+
+   nAtoms = nrOfAtoms(main)
+
+   allocate( atomCharges(nAtoms) )
+
+   call getGrossCharges(env, main, atomCharges)
+   call MDI_Send(atomCharges, nAtoms, MDI_DOUBLE, comm, ierr)
+
+   END SUBROUTINE send_charges
+
 
 END MODULE DFTBPLUS_ENGINE
