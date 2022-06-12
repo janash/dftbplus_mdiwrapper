@@ -105,6 +105,7 @@ CONTAINS
     ! Register the commands
     CALL MDI_Register_node("@DEFAULT", ierr)
     CALL MDI_Register_command("@DEFAULT", "EXIT", ierr)
+    CALL MDI_Register_command("@DEFAULT","<CELL", ierr)
     CALL MDI_Register_command("@DEFAULT","<ENERGY", ierr)
 
     ! Connct to the driver
@@ -161,6 +162,8 @@ CONTAINS
     SELECT CASE( TRIM(command) )
     CASE( "EXIT" )
        terminate_flag = .true.
+   case( "<CELL" )
+      call send_cell(comm)
    case( "<ENERGY" )
       call send_energy(comm)
     CASE DEFAULT
@@ -178,8 +181,8 @@ CONTAINS
    ! 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   SUBROUTINE send_energy(comm)
-   USE mdi , ONLY    : MDI_DOUBLE, MDI_Send, MDI_Conversion_factor
-   USE dftbp_dftbplus_mainapi, ONLY : getEnergy, nrOfAtoms
+   USE mdi , ONLY    : MDI_DOUBLE, MDI_Send
+   USE dftbp_dftbplus_mainapi, ONLY : getEnergy
 
    implicit none
    integer, intent(in)          :: comm
@@ -191,5 +194,20 @@ CONTAINS
    call MDI_Send(etotal, 1, MDI_DOUBLE, comm, ierr)
 
   END SUBROUTINE send_energy
+
+  SUBROUTINE send_cell(comm)
+   USE mdi, ONLY     : MDI_DOUBLE, MDI_Send
+
+   implicit none
+   integer, intent(in)     :: comm
+   integer                 :: ierr
+   real*8, dimension(9)    :: latVecs
+   
+   ! DFTB+ uses atomic length units, so no need to convert.
+   !! Is this reshape safe??
+   latVecs = RESHAPE(main%latVec, (/9/))
+   call MDI_Send(latVecs, 9, MDI_Double, comm, ierr)
+
+  END SUBROUTINE send_cell
 
 END MODULE DFTBPLUS_ENGINE
