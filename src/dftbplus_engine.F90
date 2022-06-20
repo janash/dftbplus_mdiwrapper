@@ -221,6 +221,13 @@ CONTAINS
    integer                 :: ierr
    real*8, dimension(9)    :: latVecs
 
+   ! Check if simulation is periodic
+   if (.not. main%tPeriodic) THEN
+      write (*,*) "Simulation cell has been requested, but simulation is not periodic."
+      call EXIT(1)
+   END IF
+
+
    ! DFTB+ uses atomic length units, so no need to convert.
    latVecs = RESHAPE(main%latVec, (/9/))
    call MDI_Send(latVecs, 9, MDI_Double, comm, ierr)
