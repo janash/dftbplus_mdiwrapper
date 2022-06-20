@@ -367,6 +367,8 @@ CONTAINS
 
       nAtoms = nrOfAtoms(main)
       
+      !! this is sending atom types, not elements
+      !! Need to fix this.
       call MDI_Send(main%species0, nAtoms, MDI_INT, comm, ierr)
 
    END SUBROUTINE send_elements 
