@@ -106,9 +106,11 @@ CONTAINS
     CALL MDI_Register_node("@DEFAULT", ierr)
     CALL MDI_Register_command("@DEFAULT", "EXIT", ierr)
     CALL MDI_Register_command("@DEFAULT","<CELL", ierr)
+    CALL MDI_Register_command("@DEFAULT", "<CELL_DISPL", ierr)
     CALL MDI_Register_command("@DEFAULT", "<CHARGES", ierr)
     CALL MDI_Register_command("@DEFAULT", "<COORDS", ierr)
     CALL MDI_Register_command("@DEFAULT","<ENERGY", ierr)
+    CALL MDI_Register_command("@DEFAULT","<NATOMS", ierr)
 
     ! Connct to the driver
     CALL MDI_Accept_communicator(comm, ierr)
@@ -166,12 +168,16 @@ CONTAINS
        terminate_flag = .true.
    case( "<CELL" )
       call send_cell(comm)
+   case( "<CELL_DISPL" )
+      call send_cell_displ(comm)
    case( "<CHARGES" )
       call send_charges(comm)
    case( "<COORDS" )
       call send_coords(comm)
    case( "<ENERGY" )
       call send_energy(comm)
+   case( "<NATOMS" )
+      call send_natoms(comm)
     CASE DEFAULT
        WRITE(6,*)'Error: command not recognized'
        STOP 1
@@ -214,13 +220,32 @@ CONTAINS
    integer, intent(in)     :: comm
    integer                 :: ierr
    real*8, dimension(9)    :: latVecs
-   
+
    ! DFTB+ uses atomic length units, so no need to convert.
-   !! Is this reshape safe??
    latVecs = RESHAPE(main%latVec, (/9/))
    call MDI_Send(latVecs, 9, MDI_Double, comm, ierr)
 
   END SUBROUTINE send_cell
+
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <CELL
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  SUBROUTINE send_cell_displ(comm)
+   USE mdi, only     : MDI_DOUBLE, MDI_Send
+
+   implicit none
+   integer, intent(in)  :: comm
+   integer              :: ierr
+   real*8, dimension(3) :: origin
+
+   ! retrieve the origin of the cell
+   call MDI_Send(origin, 3, MDI_Double, comm, ierr)
+
+  END SUBROUTINE send_cell_displ
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !
@@ -268,6 +293,28 @@ CONTAINS
       call MDI_Send(atomCoords, nCoords, MDI_DOUBLE, comm, ierr)
 
    END SUBROUTINE send_coords
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <NATOMS
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   SUBROUTINE send_natoms(comm)
+      USE mdi, ONLY          : MDI_INT, MDI_Send
+      USE dftbp_dftbplus_mainapi, ONLY : nrOfAtoms
+
+      implicit none
+      integer, intent(in)        :: comm
+      integer                    :: ierr
+      integer                    :: nAtoms
+
+      nAtoms = nrOfAtoms(main)
+      
+      call MDI_Send(nAtoms, 1, MDI_INT, comm, ierr)
+
+   END SUBROUTINE send_natoms
+
 
 
 END MODULE DFTBPLUS_ENGINE
