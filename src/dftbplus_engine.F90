@@ -109,6 +109,7 @@ CONTAINS
     CALL MDI_Register_command("@DEFAULT", "<CELL_DISPL", ierr)
     CALL MDI_Register_command("@DEFAULT", "<CHARGES", ierr)
     CALL MDI_Register_command("@DEFAULT", "<COORDS", ierr)
+    CALL MDI_Register_command("@DEFAULT", "<DIMENSIONS", ierr)
     CALL MDI_Register_command("@DEFAULT","<ENERGY", ierr)
     CALL MDI_Register_command("@DEFAULT","<NATOMS", ierr)
 
@@ -174,6 +175,8 @@ CONTAINS
       call send_charges(comm)
    case( "<COORDS" )
       call send_coords(comm)
+   case( "<DIMENSIONS" )
+      call send_dimensions(comm)
    case( "<ENERGY" )
       call send_energy(comm)
    case( "<NATOMS" )
@@ -237,7 +240,7 @@ CONTAINS
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !
-   ! Corresponds to <CELL
+   ! Corresponds to <CELL_DISPL
    ! 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -248,6 +251,12 @@ CONTAINS
    integer, intent(in)  :: comm
    integer              :: ierr
    real*8, dimension(3) :: origin
+
+   ! Check if simulation is periodic
+   if (.not. main%tPeriodic) THEN
+      write (*,*) "Simulation cell has been requested, but simulation is not periodic."
+      call EXIT(1)
+   END IF
 
    ! retrieve the origin of the cell
    call MDI_Send(origin, 3, MDI_Double, comm, ierr)
@@ -279,6 +288,12 @@ CONTAINS
 
    END SUBROUTINE send_charges
 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <COORDS
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
    SUBROUTINE send_coords(comm)
       USE mdi, ONLY          : MDI_DOUBLE, MDI_Send
       USE dftbp_dftbplus_mainapi, ONLY : nrOfAtoms
@@ -300,6 +315,35 @@ CONTAINS
       call MDI_Send(atomCoords, nCoords, MDI_DOUBLE, comm, ierr)
 
    END SUBROUTINE send_coords
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <DIMENSIONS
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   SUBROUTINE send_dimensions(comm)
+      USE mdi, ONLY           : MDI_INT, MDI_Send
+
+      implicit none
+      integer, intent(in)        :: comm
+      integer                    :: ierr
+      integer, dimension(3)       :: periodicity
+
+      ! valid calculation types seem to be either cluster (non periodic)
+      ! or supercell (periodic in three dimensions)
+      ! MDI allows us to send per dimension, but seems to be same for all
+      ! dimensions in DFTB+
+
+      if (main%tPeriodic) then
+         periodicity = (/ 2, 2, 2 /)
+      else
+         periodicity = (/ 1, 1, 1 /)
+      end if
+
+      call MDI_Send(periodicity, 3, MDI_INT, comm, ierr)
+      
+   END SUBROUTINE send_dimensions
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !
