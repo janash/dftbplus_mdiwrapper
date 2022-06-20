@@ -110,6 +110,7 @@ CONTAINS
     CALL MDI_Register_command("@DEFAULT", "<CHARGES", ierr)
     CALL MDI_Register_command("@DEFAULT", "<COORDS", ierr)
     CALL MDI_Register_command("@DEFAULT", "<DIMENSIONS", ierr)
+    CALL MDI_Register_command("@DEFAULT", "<ELEMENTS", ierr)
     CALL MDI_Register_command("@DEFAULT","<ENERGY", ierr)
     CALL MDI_Register_command("@DEFAULT","<NATOMS", ierr)
 
@@ -177,6 +178,8 @@ CONTAINS
       call send_coords(comm)
    case( "<DIMENSIONS" )
       call send_dimensions(comm)
+   case( "<ELEMENTS" )
+      call send_elements(comm)
    case( "<ENERGY" )
       call send_energy(comm)
    case( "<NATOMS" )
@@ -344,6 +347,27 @@ CONTAINS
       call MDI_Send(periodicity, 3, MDI_INT, comm, ierr)
       
    END SUBROUTINE send_dimensions
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <ELEMENTS
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   SUBROUTINE send_elements(comm)
+      USE mdi, ONLY     : MDI_INT, MDI_Send
+      USE dftbp_dftbplus_mainapi, ONLY : nrOfAtoms
+
+      implicit none
+      integer, intent(in)        :: comm
+      integer                    :: ierr
+      integer                    :: nAtoms
+
+      nAtoms = nrOfAtoms(main)
+      
+      call MDI_Send(main%species0, nAtoms, MDI_INT, comm, ierr)
+
+   END SUBROUTINE send_elements 
+
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !
