@@ -112,6 +112,7 @@ CONTAINS
     CALL MDI_Register_command("@DEFAULT", "<DIMENSIONS", ierr)
     CALL MDI_Register_command("@DEFAULT", "<ELEMENTS", ierr)
     CALL MDI_Register_command("@DEFAULT","<ENERGY", ierr)
+    CALL MDI_Register_command("@DEFAULT", "<FORCES", ierr)
     CALL MDI_Register_command("@DEFAULT","<NATOMS", ierr)
 
     ! Connct to the driver
@@ -182,6 +183,8 @@ CONTAINS
       call send_elements(comm)
    case( "<ENERGY" )
       call send_energy(comm)
+   case( "<FORCES" )
+      call send_forces(comm)
    case( "<NATOMS" )
       call send_natoms(comm)
     CASE DEFAULT
@@ -367,6 +370,38 @@ CONTAINS
       call MDI_Send(main%species0, nAtoms, MDI_INT, comm, ierr)
 
    END SUBROUTINE send_elements 
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !
+   ! Corresponds to <FORCES
+   ! 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   SUBROUTINE send_forces(comm)
+      USE mdi, ONLY        : MDI_DOUBLE, MDI_Send
+      USE dftbp_dftbplus_mainapi, ONLY: getGradients, nrOfAtoms
+
+      implicit none
+      integer, intent(in)        :: comm
+      integer                    :: ierr
+      integer                    :: nAtoms
+      integer                    :: nGradients
+      real*8, allocatable        :: atomGradients(:,:)
+      real*8, allocatable        :: flattenGradients(:)
+
+      nAtoms = nrOfAtoms(main)
+      nGradients = 3 * nAtoms
+
+      allocate( atomGradients(nAtoms, 3) )
+      allocate( flattenGradients(nGradients) )
+
+      call getGradients(env, main, atomGradients)
+
+      ! Force is negative of gradient. Check this, though.
+      flattenGradients = -1. * RESHAPE( atomGradients, (/nGradients/) )
+
+      call MDI_Send(flattenGradients, nGradients, MDI_DOUBLE, comm, ierr)
+
+   END SUBROUTINE send_forces
 
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
